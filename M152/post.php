@@ -1,5 +1,17 @@
 <?php
+  include "./lib/functions.inc.php";
 
+  $img=$_FILES["imgs"];
+  $description = filter_input(INPUT_POST,"description");
+
+  $action = filter_input(INPUT_POST,"action");
+
+  var_dump($img);
+  switch($action){
+      case "post":
+            addNewPost($description,$img);
+        break;
+  }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -34,14 +46,14 @@
 
     <div class="mt-4">
         <div class="mx-auto">
-            <div class="container-fluid">
+            <div class="container-sm">
                 <div class="text-center">
-                    <form>
+                    <form action="" method="POST" enctype="multipart/form-data">
                         <div class="col-auto">
                         <label class="col-form-label">Image a poster :</label>
                         </div>
                         <div class="col-auto">
-                        <input class="form-control" type="file" name="img" id="imgs" accept="image/*" multiple><br>
+                        <input class="form-control" type="file" name="imgs[]" id="imgs" accept="image/*" multiple><br>
                         </div>
                         <div class="col-auto">
                         <label class="form-label">Description :</label>
@@ -50,7 +62,7 @@
                         <textarea class="col-form-control" name="description"></textarea>
                         </div>
 
-                        <button class="btn btn-primary" type="submit" name="action">valider</button>
+                        <button class="btn btn-primary" type="submit" name="action" value="post">valider</button>
                     </form>
                 </div>
             </div>

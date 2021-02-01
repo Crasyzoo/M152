@@ -37,7 +37,7 @@
     </div>
 
     <div class="mt-4">
-        <div class="float-end">
+        <div class="mx-auto">
             <div class="position-relative">
                 <div class="container-fluid" class="position-absolute top-50 start-50 translate-middle">
                     <div class="card" style="width: 30rem;">
