@@ -1,17 +1,25 @@
 <?php
-  include "./lib/functions.inc.php";
+include "./lib/functions.inc.php";
 
-  $img=$_FILES["imgs"];
-  $description = filter_input(INPUT_POST,"description");
+$imgs = $_FILES["imgs"];
+var_dump($imgs);
+$description = filter_input(INPUT_POST, "description");
 
-  $action = filter_input(INPUT_POST,"action");
+$action = filter_input(INPUT_POST, "action");
 
-  var_dump($img);
-  switch($action){
-      case "post":
-            addNewPost($description,$img);
+switch ($action) {
+    case "post":
+        $imagesValide = [];
+        for($i=0; $i < Count($imgs["name"]);$i++){
+            if (strstr($imgs["type"][$i],"image/")) {
+                array_push($imagesValide, ["name"=>$imgs["name"][$i],"type"=>$imgs["type"][$i]]);
+            }
+        }
+        if($imagesValide != []){
+            addNewPost($description, $imagesValide);
+        }
         break;
-  }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -50,16 +58,16 @@
                 <div class="text-center">
                     <form action="" method="POST" enctype="multipart/form-data">
                         <div class="col-auto">
-                        <label class="col-form-label">Image a poster :</label>
+                            <label class="col-form-label">Image a poster :</label>
                         </div>
                         <div class="col-auto">
-                        <input class="form-control" type="file" name="imgs[]" id="imgs" accept="image/*" multiple><br>
+                            <input class="form-control" type="file" name="imgs[]" id="imgs" accept="image/*" multiple><br>
                         </div>
                         <div class="col-auto">
-                        <label class="form-label">Description :</label>
+                            <label class="form-label">Description :</label>
                         </div>
                         <div class="col-auto">
-                        <textarea class="col-form-control" name="description"></textarea>
+                            <textarea class="col-form-control" name="description"></textarea>
                         </div>
 
                         <button class="btn btn-primary" type="submit" name="action" value="post">valider</button>
@@ -68,9 +76,6 @@
             </div>
         </div>
     </div>
-
-
-
     <div id="fb-root">
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>

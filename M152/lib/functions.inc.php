@@ -46,8 +46,8 @@ function getAllPost()
 
 function addNewPost($commentaire, $images)
 {
-    $date = date('d.m.y');
-    $sql = "INSERT INTO `post` (`commentaire`,`datePost`) VALUES (:com,:date); ";
+    $date = date('Y-m-d');
+    $sql = "INSERT INTO `post` (`commentaire`,`datePost`) VALUES (:com,:date);";
     $ps = ConnectDb()->prepare($sql);
     try {
         $ps->bindParam(":com",$commentaire,PDO::PARAM_STR);
@@ -59,15 +59,15 @@ function addNewPost($commentaire, $images)
     }
 
 
-    $sql = "INSERT INTO `Media` (`nomFichierMedia`,`typeMedia`,idPost) VALUES (:name,:type,(SELECT idpost FROM post WHERE commentaire=:com AND datePost=:date))";
+    $sql = "INSERT INTO `Media` (`nomFichierMedia`,`typeMedia`,`dateCreation`,`idPost`) VALUES (:name,:type,:date,(SELECT idpost FROM post WHERE commentaire=:com AND datePost=:date))";
     $ps=ConnectDb()->prepare($sql);
     try {
         $ps->bindParam(":com",$commentaire,PDO::PARAM_STR);
         $ps->bindParam(":date",$date);
 
-       for($i=0; $i < Count($images["name"]);$i++){
-            $ps->bindParam(":name",$images["name"][$i],PDO::PARAM_STR);
-            $ps->bindParam(":type",$images["type"][$i],PDO::PARAM_STR);
+       foreach($images as $value){
+            $ps->bindParam(":name",$value["name"],PDO::PARAM_STR);
+            $ps->bindParam(":type",$value["type"],PDO::PARAM_STR);
             $ps->execute();
        }
     } catch (Exception $e) {
