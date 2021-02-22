@@ -13,10 +13,13 @@ switch ($action) {
         for($i=0; $i < Count($imgs["name"]);$i++){
             if (strstr($imgs["type"][$i],"image/")) {
                 array_push($imagesValide, ["name"=>$imgs["name"][$i],"type"=>$imgs["type"][$i]]);
+                if(!file_exists("./img/".$imgs["name"][$i])){
+                   move_uploaded_file($imgs["tmp_name"][$i],"./img/".$imgs["name"][$i]);
+                }
             }
         }
         if($imagesValide != []){
-            addNewPost($description, $imagesValide);
+            addNewPost($description, $imagesValide);   
         }
         break;
 }
