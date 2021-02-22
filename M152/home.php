@@ -27,15 +27,6 @@
             </div>
         </div>
     </div>
-
-    <div class="float-start">
-        <div class="container-fluid">
-            <p>
-                vdhgfdscgdfsdsghfcd
-            </p>
-        </div>
-    </div>
-
     <div class="mt-4">
         <div class="mx-auto">
             <div class="position-relative">
