@@ -10,16 +10,32 @@ $action = filter_input(INPUT_POST, "action");
 switch ($action) {
     case "post":
         $imagesValide = [];
-        for($i=0; $i < Count($imgs["name"]);$i++){
-            if (strstr($imgs["type"][$i],"image/")) {
-                array_push($imagesValide, ["name"=>$imgs["name"][$i],"type"=>$imgs["type"][$i]]);
-                if(!file_exists("./img/".$imgs["name"][$i])){
-                   move_uploaded_file($imgs["tmp_name"][$i],"./img/".$imgs["name"][$i]);
+        $fullSize = 0;
+        if ($description && $description != "") {
+            foreach ($imgs["size"] as $value) {
+                $fullSize += $value;
+            }
+            // test que la taille de l'ensemble des images est de 70 mega maximum
+            if ($fullSize <= 70 * pow(10, 6)) {
+                for ($i = 0; $i < Count($imgs["name"]); $i++) {
+                    // test que le fichier recu est bien une image et a une taille de 3 mega
+                    if (strstr($imgs["type"][$i], "image/") && $imgs["size"][$i] <= 3 * pow(10, 6)) {
+                        $newNom = uniqid($imgs["name"][$i]);
+                        array_push($imagesValide, ["name" => $newNom, "type" => $imgs["type"][$i]]);
+                        // verifie si le fichier actuel existe deja sur le serveur, si non alors il l'enregistre
+                        if (!file_exists("./img/" . $imgs["name"][$i])) {
+                            move_uploaded_file($imgs["tmp_name"][$i], "./img/" .$newNom);
+                        }
+                    } else {
+                        echo "l'image n'est pas valide";
+                        break;
+                    }
+                }
+                if ($imagesValide != []) {
+                    addNewPost($description, $imagesValide);
+                    header('Location: home.php');
                 }
             }
-        }
-        if($imagesValide != []){
-            addNewPost($description, $imagesValide);   
         }
         break;
 }
@@ -70,7 +86,7 @@ switch ($action) {
                             <label class="form-label">Description :</label>
                         </div>
                         <div class="col-auto">
-                            <textarea class="col-form-control" name="description"></textarea>
+                            <textarea class="col-form-control" name="description" required></textarea>
                         </div>
 
                         <button class="btn btn-primary" type="submit" name="action" value="post">valider</button>
