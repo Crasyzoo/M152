@@ -59,12 +59,13 @@ function addNewPost($commentaire, $images)
     }
 
 
-    $sql = "INSERT INTO `Media` (`nomFichierMedia`,`typeMedia`,`creationDate`,`idPost`) VALUES (:name,:type,:date,(SELECT idpost FROM post WHERE commentaire=:com AND creationDate=:date))";
+    $sql = "INSERT INTO `Media` (`nomFichierMedia`,`typeMedia`,`creationDate`,`idPost`) VALUES (:name,:type,:date,(SELECT idPost FROM post WHERE commentaire=:com AND creationDate=:date))";
     $ps = ConnectDb()->prepare($sql);
     try {
         $ps->bindParam(":com", $commentaire, PDO::PARAM_STR);
         $ps->bindParam(":date", $date);
         foreach ($images as $value) {
+            var_dump($value["type"]);
             $ps->bindParam(":name", $value["name"], PDO::PARAM_STR);
             $ps->bindParam(":type", $value["type"], PDO::PARAM_STR);
             $ps->execute();
@@ -97,17 +98,19 @@ function getAllImagesFromAPost($idPost)
 function DisplayPosts()
 {
     $posts = getAllPost();
+    echo "<table class=\"mx-auto\">";
     foreach ($posts as $post) {
-        $images = getAllImagesFromAPost($post["idpost"]);
-        echo " <div class=\"container-fluid mx-auto my-4\" style=\"width: 35rem;\">";
-        echo "\n\t<div class=\"card float-start mx-1\" style=\"width: 30rem;\">";
+        $images = getAllImagesFromAPost($post["idPost"]);
+        echo "<tr><td>";
+        echo " <div class=\"container-fluid  my-4\" style=\"width: 35rem;\">";
+        echo "\n\t<div class=\"card float-start mx-1\" style=\"width: 30rem; height: 28rem;\">";
         //------------------------------------------------------------------------------------------------------
         if (count($images) > 1) {
-            echo  "<div id=\"carouselExampleIndicators\" class=\"carousel slide\" data-ride=\"carousel\">";
+            echo  sprintf("<div id=\"carouselExampleIndicators%s\" class=\"carousel slide\" data-ride=\"carousel\">", $post["idPost"]);
             echo "<ol class=\"carousel-indicators\">";
             $compteur = 0;
             foreach ($images as $value) {
-                echo sprintf("<li data-target=\"#carouselExampleIndicators\" data-slide-to=\"%s\" class=\"%s\"></li>", $compteur, $compteur == 0 ? "active" : "");
+                echo sprintf("<li data-target=\"#carouselExampleIndicators%s\" data-slide-to=\"%s\" class=\"%s\"></li>", $post["idPost"], $compteur, $compteur == 0 ? "active" : "");
                 $compteur++;
             }
             echo "</ol>";
@@ -115,24 +118,39 @@ function DisplayPosts()
 
             $compteur = 0;
             foreach ($images as $value) {
-
                 echo sprintf("<div class=\"carousel-item %s\">", $compteur == 0 ? "active" : "");
-                echo "<img class=\"d-block w-100\" src=\"img/" . $value["nomFichierMedia"] . "\" alt=\"First slide\">";
+                if(strstr($value["typeMedia"],"image/")){
+                        echo "<img class=\"d-block w-100 img-fluid\" style=\"height: 28rem;\" src=\"img/" . $value["nomFichierMedia"] . "\" alt=\"First slide\">"; 
+                }else if(strstr($value["typeMedia"],"audio/mpeg")){
+                    echo "<audio class=\"d-block w-100 \" controls style=\"height: 28rem;\" src=\"img/" . $value["nomFichierMedia"] . "\" alt=\"First slide\">"; 
+                }else if(strstr($value["typeMedia"],"video/mp4")){
+                    echo "<video class=\"d-block w-100 \" controls style=\"height: 28rem;\" alt=\"First slide\">"; 
+                    echo "<source src=\"img/" . $value["nomFichierMedia"] . "\" type=\"video/mp4\">";
+                    echo "</video>";
+                }
                 echo "</div>";
                 $compteur++;
             }
             echo "</div>";
-            echo "<a class=\"carousel-control-prev\" href=\"#carouselExampleIndicators\" role=\"button\" data-slide=\"prev\">";
+            echo sprintf("<a class=\"carousel-control-prev\" href=\"#carouselExampleIndicators%s\" role=\"button\" data-slide=\"prev\">", $post["idPost"]);
             echo "<span class=\"carousel-control-prev-icon\" aria-hidden=\"true\"></span>";
             echo "<span class=\"sr-only\">Previous</span>";
             echo "</a>";
-            echo "<a class=\"carousel-control-next\" href=\"#carouselExampleIndicators\" role=\"button\" data-slide=\"next\">";
+            echo sprintf("<a class=\"carousel-control-next\" href=\"#carouselExampleIndicators%s\" role=\"button\" data-slide=\"next\">", $post["idPost"]);
             echo "<span class=\"carousel-control-next-icon\" aria-hidden=\"true\"></span>";
             echo  "<span class=\"sr-only\">Next</span>";
             echo "</a>";
             echo "</div>";
         } else {
-            echo "\n\t\t<img src=\"img/" . $images[0]["nomFichierMedia"] . "\" class=\"card-img-top\" alt=\"...\">";
+            if(strstr($images[0]["typeMedia"],"image/")){
+                echo "<img class=\"d-block w-100 img-fluid\" style=\"height: 28rem;\" src=\"./img/" . $images[0]["nomFichierMedia"] . "\" alt=\"First slide\">"; 
+        }else if(strstr($images[0]["typeMedia"],"audio/mpeg")){
+            echo "<audio class=\"d-block w-100 \" controls style=\"height: 28rem;\" src=\"./img/" .$images[0]["nomFichierMedia"] . "\" alt=\"First slide\">"; 
+        }else if(strstr($images[0]["typeMedia"],"video/mp4")){
+            echo "<video class=\"d-block w-100 \" style=\"height: 28rem;\" alt=\"First slide\">"; 
+            echo "<source src=\"./img/" .$images[0]["nomFichierMedia"]. "\">";
+            echo "</video>";
+        }
         }
         //------------------------------------------------------------------------------------------------------
         echo "\n\t\t\t<div class=\"card-body\">";
@@ -140,12 +158,12 @@ function DisplayPosts()
         echo "\n\t\t\t</div>";
         echo "\n\t</div>";
         echo "\n\t<form action=\"\" method=\"post\">";
-        echo "\n\t\t<button class=\"btn btn-primary float-end\" type=\"submit\" name=\"action\" value=\"edit/" . $post["idpost"] . "\">";
+        echo "\n\t\t<button class=\"btn btn-primary float-end\" type=\"submit\" name=\"action\" value=\"edit/" . $post["idPost"] . "\">";
         echo "\n\t\t\t<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"bi bi-pen\" viewBox=\"0 0 16 16\">";
         echo "\n\t\t\t\t<path d=\"M13.498.795l.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001zm-.644.766a.5.5 0 0 0-.707 0L1.95 11.756l-.764 3.057 3.057-.764L14.44 3.854a.5.5 0 0 0 0-.708l-1.585-1.585z\" />";
         echo "\n\t\t\t</svg>";
         echo "\n\t\t</button>";
-        echo "\n\t\t<button class=\"btn btn-primary float-end mt-1\" type=\"submit\" name=\"action\" value=\"delete/" . $post["idpost"] . "\">";
+        echo "\n\t\t<button class=\"btn btn-primary float-end mt-1\" type=\"submit\" name=\"action\" value=\"delete/" . $post["idPost"] . "\">";
         echo "\n\t\t\t<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"bi bi-trash\" viewBox=\"0 0 16 16\">";
         echo "\n\t\t\t\t<path d=\"M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z\" />";
         echo "\n\t\t\t\t<path fill-rule=\"evenodd\" d=\"M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z\" />";
@@ -153,5 +171,6 @@ function DisplayPosts()
         echo "\n\t\t</button>";
         echo "\n\t</form>";
         echo "</div>";
+        echo "</td></tr>";
     }
 }

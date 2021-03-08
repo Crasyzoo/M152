@@ -19,21 +19,31 @@ switch ($action) {
             if ($fullSize <= 70 * pow(10, 6)) {
                 for ($i = 0; $i < Count($imgs["name"]); $i++) {
                     // test que le fichier recu est bien une image et a une taille de 3 mega
-                    if (strstr($imgs["type"][$i], "image/") && $imgs["size"][$i] <= 3 * pow(10, 6)) {
+                    if (strstr($imgs["type"][$i], "image/") && $imgs["size"][$i] <= 3 * pow(10, 6) || strstr($imgs["type"][$i], "audio/mpeg") || strstr($imgs["type"][$i], "video/mp4")) {
                         $newNom = uniqid($imgs["name"][$i]);
                         array_push($imagesValide, ["name" => $newNom, "type" => $imgs["type"][$i]]);
                         // verifie si le fichier actuel existe deja sur le serveur, si non alors il l'enregistre
                         if (!file_exists("./img/" . $imgs["name"][$i])) {
-                            move_uploaded_file($imgs["tmp_name"][$i], "./img/" .$newNom);
+                            move_uploaded_file($imgs["tmp_name"][$i], "./img/" . $newNom);
                         }
                     } else {
+                        $imagesValide = [];
                         echo "l'image n'est pas valide";
                         break;
                     }
                 }
                 if ($imagesValide != []) {
-                    addNewPost($description, $imagesValide);
-                    header('Location: home.php');
+                    // verifie si chaque fichier a bien été upload avant d'enregistrer dans la base
+                    $uploadFileExist = true;
+                    foreach ($imagesValide as $value) {
+                        if (!file_exists("./img/" . $value["name"])) {
+                            $uploadFileExist = false;
+                        }
+                    }
+                    if ($uploadFileExist) {
+                        addNewPost($description, $imagesValide);
+                        header('Location: home.php');
+                    }
                 }
             }
         }
@@ -80,7 +90,7 @@ switch ($action) {
                             <label class="col-form-label">Image a poster :</label>
                         </div>
                         <div class="col-auto">
-                            <input class="form-control" type="file" name="imgs[]" id="imgs" accept="image/*" multiple><br>
+                            <input class="form-control" type="file" name="imgs[]" id="imgs" accept="image/*, audio/mp3, video/mp4" multiple><br>
                         </div>
                         <div class="col-auto">
                             <label class="form-label">Description :</label>
