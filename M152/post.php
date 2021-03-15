@@ -1,4 +1,5 @@
 <?php
+session_start();
 include "./lib/functions.inc.php";
 
 $imgs = $_FILES["imgs"];
@@ -7,11 +8,12 @@ $description = filter_input(INPUT_POST, "description");
 
 $action = filter_input(INPUT_POST, "action");
 
+$uploadFileState = true;
 switch ($action) {
     case "post":
         $imagesValide = [];
         $fullSize = 0;
-        if ($description && $description != "") {
+        if ($description && $description != "" && $imgs["name"][0]!="") {
             foreach ($imgs["size"] as $value) {
                 $fullSize += $value;
             }
@@ -24,7 +26,9 @@ switch ($action) {
                         array_push($imagesValide, ["name" => $newNom, "type" => $imgs["type"][$i]]);
                         // verifie si le fichier actuel existe deja sur le serveur, si non alors il l'enregistre
                         if (!file_exists("./img/" . $imgs["name"][$i])) {
-                            move_uploaded_file($imgs["tmp_name"][$i], "./img/" . $newNom);
+                            if (!move_uploaded_file($imgs["tmp_name"][$i], "./img/" . $newNom)) {
+                                $uploadFileState = false;
+                            }
                         }
                     } else {
                         $imagesValide = [];
@@ -32,7 +36,8 @@ switch ($action) {
                         break;
                     }
                 }
-                if ($imagesValide != []) {
+                // si l'upload des fichiers c'est bien passer alors on ajoute a la db sinon on supprime tout les fichiers qui ont ete upload par ce post 
+                if ($imagesValide != [] && $uploadFileState) {
                     // verifie si chaque fichier a bien été upload avant d'enregistrer dans la base
                     $uploadFileExist = true;
                     foreach ($imagesValide as $value) {
@@ -41,11 +46,22 @@ switch ($action) {
                         }
                     }
                     if ($uploadFileExist) {
-                        addNewPost($description, $imagesValide);
-                        header('Location: home.php');
+                        if(addNewPost($description, $imagesValide)){
+                            header('Location: home.php');
+                        }        
+                    }
+                } else {
+                    foreach ($imagesValide as $value) {
+                        if (file_exists("./img/" .  $value["name"])) {
+                            unlink("./img/" . $value["name"]);
+                        }
                     }
                 }
             }
+        }else{
+            if(addNewPost($description, $imagesValide)){
+                 header('Location: home.php');
+             } 
         }
         break;
 }
@@ -90,7 +106,7 @@ switch ($action) {
                             <label class="col-form-label">Image a poster :</label>
                         </div>
                         <div class="col-auto">
-                            <input class="form-control" type="file" name="imgs[]" id="imgs" accept="image/*, audio/mp3, video/mp4" multiple><br>
+                            <input class="form-control" type="file" name="imgs[]" id="imgs" accept="image/*, audio/*, video/*" multiple><br>
                         </div>
                         <div class="col-auto">
                             <label class="form-label">Description :</label>

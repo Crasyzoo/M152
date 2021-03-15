@@ -9,6 +9,17 @@ $allPosts = getAllPost();
 foreach ($allPosts as $value) {
     $_SESSION["idposts"][$value["idpost"]] = ["imageActive" => 0];
 }
+
+$action = filter_input(INPUT_POST, "action");
+$action = explode("/", $action);
+switch ($action[0]) {
+    case "edit":
+
+        break;
+    case "delete":
+
+        break;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

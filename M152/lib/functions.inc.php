@@ -46,33 +46,42 @@ function getAllPost()
 
 function addNewPost($commentaire, $images)
 {
-    $date = date('Y-m-d');
+    static $ps = null;
+    static $ps2 = null;
+    $date = date('Y-m-d H:i:s');
     $sql = "INSERT INTO `post` (`commentaire`,`creationDate`) VALUES (:com,:date);";
-    $ps = ConnectDb()->prepare($sql);
-    try {
-        $ps->bindParam(":com", $commentaire, PDO::PARAM_STR);
-        $ps->bindParam(":date", $date);
-
-        $ps->execute();
-    } catch (Exception $e) {
-        echo $e;
+    $sql2 = "INSERT INTO `Media` (`nomFichierMedia`,`typeMedia`,`creationDate`,`idPost`) VALUES (:name,:type,:date,(SELECT idPost FROM post WHERE commentaire=:com AND creationDate=:date))";
+    if ($ps == null) {
+        $ps2 = ConnectDb()->prepare($sql2);
+        $ps = ConnectDb()->prepare($sql);
     }
-
-
-    $sql = "INSERT INTO `Media` (`nomFichierMedia`,`typeMedia`,`creationDate`,`idPost`) VALUES (:name,:type,:date,(SELECT idPost FROM post WHERE commentaire=:com AND creationDate=:date))";
-    $ps = ConnectDb()->prepare($sql);
+    $answer = false;
     try {
+        ConnectDb()->beginTransaction();
         $ps->bindParam(":com", $commentaire, PDO::PARAM_STR);
         $ps->bindParam(":date", $date);
-        foreach ($images as $value) {
-            var_dump($value["type"]);
-            $ps->bindParam(":name", $value["name"], PDO::PARAM_STR);
-            $ps->bindParam(":type", $value["type"], PDO::PARAM_STR);
-            $ps->execute();
+        if ($ps->execute() && $images != []) {
+            $ps2->bindParam(":com", $commentaire, PDO::PARAM_STR);
+            $ps2->bindParam(":date", $date);
+            foreach ($images as $value) {
+                $ps2->bindParam(":name", $value["name"], PDO::PARAM_STR);
+                $ps2->bindParam(":type", $value["type"], PDO::PARAM_STR);
+                $ps2->execute();
+            }
         }
+        ConnectDb()->commit();
+        $answer = true;
     } catch (Exception $e) {
+        ConnectDb()->rollBack();
+        foreach ($images as $value) {
+            if (file_exists("./img/" .  $value["name"])) {
+                unlink("./img/" . $value["name"]);
+            }
+        }
+
         echo $e;
     }
+    return $answer;
 }
 
 function getAllImagesFromAPost($idPost)
@@ -104,7 +113,7 @@ function DisplayPosts()
         echo "<tr><td>";
         echo " <div class=\"container-fluid  my-4\" style=\"width: 35rem;\">";
         echo "\n\t<div class=\"card float-start mx-1\" style=\"width: 30rem; height: 28rem;\">";
-        //------------------------------------------------------------------------------------------------------
+        //------------------------------------------------Affiche les images en carousel si il y en a plusieurs------------------------------------------------------
         if (count($images) > 1) {
             echo  sprintf("<div id=\"carouselExampleIndicators%s\" class=\"carousel slide\" data-ride=\"carousel\">", $post["idPost"]);
             echo "<ol class=\"carousel-indicators\">";
@@ -119,38 +128,36 @@ function DisplayPosts()
             $compteur = 0;
             foreach ($images as $value) {
                 echo sprintf("<div class=\"carousel-item %s\">", $compteur == 0 ? "active" : "");
-                if(strstr($value["typeMedia"],"image/")){
-                        echo "<img class=\"d-block w-100 img-fluid\" style=\"height: 28rem;\" src=\"img/" . $value["nomFichierMedia"] . "\" alt=\"First slide\">"; 
-                }else if(strstr($value["typeMedia"],"audio/mpeg")){
-                    echo "<audio class=\"d-block w-100 \" controls style=\"height: 28rem;\" src=\"img/" . $value["nomFichierMedia"] . "\" alt=\"First slide\">"; 
-                }else if(strstr($value["typeMedia"],"video/mp4")){
-                    echo "<video class=\"d-block w-100 \" controls style=\"height: 28rem;\" alt=\"First slide\">"; 
-                    echo "<source src=\"img/" . $value["nomFichierMedia"] . "\" type=\"video/mp4\">";
-                    echo "</video>";
+                echo "<div style=\"height: 25rem;\" class=\"position-relative\">";
+                if (strstr($value["typeMedia"], "image/")) {
+                    echo "<img class=\"d-block w-100 img-fluid\" style=\"height: 100%; width: 100%;\" src=\"img/" . $value["nomFichierMedia"] . "\" alt=\"First slide\">";
+                } else if (strstr($value["typeMedia"], "audio/")) {
+                    echo "<audio class=\"d-block position-absolute\" style=\"top: 25%; left: 12.5%; width: 75%;\" controls src=\"img/" . $value["nomFichierMedia"] . "\" alt=\"First slide\">";
+                } else if (strstr($value["typeMedia"], "video/")) {
+                    echo "<video class=\"embed-responsive-item position-absolute\" controls style=\"height: 75%; width: 75%; left: 14%\" src=\"img/" . $value["nomFichierMedia"] . "\" preload=\"auto\" autoplay=\"true\" loop muted allowfullscreen></video>";
                 }
+                echo "</div>";
                 echo "</div>";
                 $compteur++;
             }
             echo "</div>";
-            echo sprintf("<a class=\"carousel-control-prev\" href=\"#carouselExampleIndicators%s\" role=\"button\" data-slide=\"prev\">", $post["idPost"]);
+            echo sprintf("<a class=\"carousel-control-prev text-dark\" href=\"#carouselExampleIndicators%s\" role=\"button\" data-slide=\"prev\">", $post["idPost"]);
             echo "<span class=\"carousel-control-prev-icon\" aria-hidden=\"true\"></span>";
             echo "<span class=\"sr-only\">Previous</span>";
             echo "</a>";
-            echo sprintf("<a class=\"carousel-control-next\" href=\"#carouselExampleIndicators%s\" role=\"button\" data-slide=\"next\">", $post["idPost"]);
+            echo sprintf("<a class=\"carousel-control-next text-dark\" href=\"#carouselExampleIndicators%s\" role=\"button\" data-slide=\"next\">", $post["idPost"]);
             echo "<span class=\"carousel-control-next-icon\" aria-hidden=\"true\"></span>";
-            echo  "<span class=\"sr-only\">Next</span>";
+            echo "<span class=\"sr-only\">Next</span>";
             echo "</a>";
             echo "</div>";
         } else {
-            if(strstr($images[0]["typeMedia"],"image/")){
-                echo "<img class=\"d-block w-100 img-fluid\" style=\"height: 28rem;\" src=\"./img/" . $images[0]["nomFichierMedia"] . "\" alt=\"First slide\">"; 
-        }else if(strstr($images[0]["typeMedia"],"audio/mpeg")){
-            echo "<audio class=\"d-block w-100 \" controls style=\"height: 28rem;\" src=\"./img/" .$images[0]["nomFichierMedia"] . "\" alt=\"First slide\">"; 
-        }else if(strstr($images[0]["typeMedia"],"video/mp4")){
-            echo "<video class=\"d-block w-100 \" style=\"height: 28rem;\" alt=\"First slide\">"; 
-            echo "<source src=\"./img/" .$images[0]["nomFichierMedia"]. "\">";
-            echo "</video>";
-        }
+            if (strstr($images[0]["typeMedia"], "image/")) {
+                echo "<img class=\"d-block w-100 img-fluid\" style=\"height: 25rem;\" src=\"./img/" . $images[0]["nomFichierMedia"] . "\" alt=\"First slide\">";
+            } else if (strstr($images[0]["typeMedia"], "audio/")) {
+                echo "<div style=\"height: 25rem;\" class=\"position-relative\"><audio class=\"d-block position-absolute\" style=\"top: 25%; left: 12.5%; width: 75%;\" controls src=\"img/" . $images[0]["nomFichierMedia"]  . "\" alt=\"First slide\"></div>";
+            } else if (strstr($images[0]["typeMedia"], "video/")) {
+                echo "<video class=\"embed-responsive-item\" controls style=\"height: 25rem;\" src=\"img/" . $images[0]["nomFichierMedia"] . "\" preload=\"auto\" autoplay=\"true\" loop muted allowfullscreen></video>";
+            }
         }
         //------------------------------------------------------------------------------------------------------
         echo "\n\t\t\t<div class=\"card-body\">";
@@ -163,7 +170,7 @@ function DisplayPosts()
         echo "\n\t\t\t\t<path d=\"M13.498.795l.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001zm-.644.766a.5.5 0 0 0-.707 0L1.95 11.756l-.764 3.057 3.057-.764L14.44 3.854a.5.5 0 0 0 0-.708l-1.585-1.585z\" />";
         echo "\n\t\t\t</svg>";
         echo "\n\t\t</button>";
-        echo "\n\t\t<button class=\"btn btn-primary float-end mt-1\" type=\"submit\" name=\"action\" value=\"delete/" . $post["idPost"] . "\">";
+        echo "\n\t\t<button class=\"btn btn-danger float-end mt-1\" type=\"submit\" name=\"action\" value=\"delete/" . $post["idPost"] . "\">";
         echo "\n\t\t\t<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"bi bi-trash\" viewBox=\"0 0 16 16\">";
         echo "\n\t\t\t\t<path d=\"M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z\" />";
         echo "\n\t\t\t\t<path fill-rule=\"evenodd\" d=\"M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z\" />";
@@ -173,4 +180,9 @@ function DisplayPosts()
         echo "</div>";
         echo "</td></tr>";
     }
+}
+
+function DeletePost($idPost){
+    static $ps=null;
+    
 }
