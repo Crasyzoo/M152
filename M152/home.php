@@ -1,23 +1,28 @@
 <?php
 session_start();
 include "./lib/functions.inc.php";
-if (!isset($_SESSION["idposts"])) {
-    $_SESSION["idposts"] = [];
-}
-$_SESSION["idposts"] = [];
-$allPosts = getAllPost();
-foreach ($allPosts as $value) {
-    $_SESSION["idposts"][$value["idpost"]] = ["imageActive" => 0];
+if (!isset($_SESSION["modPost"])) {
+    $_SESSION["modPost"]="new";
+    $_SESSION["idPost"];
 }
 
 $action = filter_input(INPUT_POST, "action");
-$action = explode("/", $action);
-switch ($action[0]) {
+$idPost=explode("/", $action)[1];
+$action = explode("/", $action)[0];
+switch ($action) {
     case "edit":
-
+        $_SESSION["modPost"]="update";
+        $_SESSION["idPost"]=$idPost;
+        header('Location: post.php');
         break;
     case "delete":
-
+         DeletePost($idPost);
+         $images=getAllImagesFromAPost($idPost);
+         foreach($images as $value){
+             if(file_exists("./img/".$value["nomFichierMedia"])){
+                 unlink("./img/".$value["nomFichierMedia"]);
+             }
+         }
         break;
 }
 ?>

@@ -26,6 +26,25 @@ function ConnectDb()
     return $db;
 }
 
+function GetAPost($idPost)
+{
+    static $ps = null;
+    $sql = "SELECT * FROM `post` WHERE idPost LIKE :idPost";
+    if ($ps == null) {
+        $ps = ConnectDb()->prepare($sql);
+    }
+    $answer = false;
+    try {
+        $ps->bindParam(":idPost", $idPost, PDO::PARAM_INT);
+        if ($ps->execute()) {
+            $answer = $ps->fetchAll(PDO::FETCH_ASSOC);
+        }
+    } catch (Exception $e) {
+        echo "Error : " . $e;
+    }
+    return $answer;
+}
+
 function getAllPost()
 {
     static $ps = null;
@@ -115,7 +134,7 @@ function DisplayPosts()
         echo "\n\t<div class=\"card float-start mx-1\" style=\"width: 30rem; height: 28rem;\">";
         //------------------------------------------------Affiche les images en carousel si il y en a plusieurs------------------------------------------------------
         if (count($images) > 1) {
-            echo  sprintf("<div id=\"carouselExampleIndicators%s\" class=\"carousel slide\" data-ride=\"carousel\">", $post["idPost"]);
+            echo  sprintf("<div id=\"carouselExampleIndicators%s\" class=\"carousel \" data-ride=\"carousel\">", $post["idPost"]);
             echo "<ol class=\"carousel-indicators\">";
             $compteur = 0;
             foreach ($images as $value) {
@@ -182,7 +201,40 @@ function DisplayPosts()
     }
 }
 
-function DeletePost($idPost){
-    static $ps=null;
-    
+function DeletePost($idPost)
+{
+    static $ps = null;
+    $sql = "DELETE FROM post WHERE idPost LIKE :idPost";
+    ConnectDb()->beginTransaction();
+    if ($ps == null) {
+        $ps = ConnectDb()->prepare($sql);
+    }
+    try {
+        $ps->bindParam(":idPost", $idPost, PDO::PARAM_INT);
+        $ps->execute();
+        ConnectDb()->commit();
+    } catch (Exception $e) {
+        ConnectDb()->rollBack();
+        echo $e;
+    }
+}
+
+function UpdatePost($idPost, $newCom, $newFiles)
+{
+    var_dump($newFiles);
+    static $ps = null;
+    $sql = "UPDATE post SET commentaire = :com WHERE idPost LIKE :idPost";
+    ConnectDb()->beginTransaction();
+    if ($ps == null) {
+        $ps = ConnectDb()->prepare($sql);
+    }
+
+    try {
+        $ps->bindParam(":com",$newCom,PDO::PARAM_STR);
+        $ps->bindParam(":idPost",$idPost,PDO::PARAM_INT);
+        $ps->execute();
+        ConnectDb()->commit();
+    } catch (Exception $e) {
+        ConnectDb()->rollBack();
+    }
 }

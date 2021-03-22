@@ -2,6 +2,21 @@
 session_start();
 include "./lib/functions.inc.php";
 
+
+$modPost = $_SESSION["modPost"];
+$com = "";
+$idPost = -1;
+$imagesDuPost = [];
+if ($modPost == "update") {
+    $idPost = $_SESSION["idPost"];
+    $post = GetAPost($idPost);
+    $com = $post[0]["commentaire"];
+    $imagesDuPost = getAllImagesFromAPost($idPost);
+  
+}
+
+
+
 $imgs = $_FILES["imgs"];
 var_dump($imgs);
 $description = filter_input(INPUT_POST, "description");
@@ -9,61 +24,64 @@ $description = filter_input(INPUT_POST, "description");
 $action = filter_input(INPUT_POST, "action");
 
 $uploadFileState = true;
-switch ($action) {
-    case "post":
-        $imagesValide = [];
-        $fullSize = 0;
-        if ($description && $description != "" && $imgs["name"][0]!="") {
-            foreach ($imgs["size"] as $value) {
-                $fullSize += $value;
-            }
-            // test que la taille de l'ensemble des images est de 70 mega maximum
-            if ($fullSize <= 70 * pow(10, 6)) {
-                for ($i = 0; $i < Count($imgs["name"]); $i++) {
-                    // test que le fichier recu est bien une image et a une taille de 3 mega
-                    if (strstr($imgs["type"][$i], "image/") && $imgs["size"][$i] <= 3 * pow(10, 6) || strstr($imgs["type"][$i], "audio/mpeg") || strstr($imgs["type"][$i], "video/mp4")) {
-                        $newNom = uniqid($imgs["name"][$i]);
-                        array_push($imagesValide, ["name" => $newNom, "type" => $imgs["type"][$i]]);
-                        // verifie si le fichier actuel existe deja sur le serveur, si non alors il l'enregistre
-                        if (!file_exists("./img/" . $imgs["name"][$i])) {
-                            if (!move_uploaded_file($imgs["tmp_name"][$i], "./img/" . $newNom)) {
-                                $uploadFileState = false;
-                            }
-                        }
-                    } else {
-                        $imagesValide = [];
-                        echo "l'image n'est pas valide";
-                        break;
-                    }
-                }
-                // si l'upload des fichiers c'est bien passer alors on ajoute a la db sinon on supprime tout les fichiers qui ont ete upload par ce post 
-                if ($imagesValide != [] && $uploadFileState) {
-                    // verifie si chaque fichier a bien été upload avant d'enregistrer dans la base
-                    $uploadFileExist = true;
-                    foreach ($imagesValide as $value) {
-                        if (!file_exists("./img/" . $value["name"])) {
-                            $uploadFileExist = false;
-                        }
-                    }
-                    if ($uploadFileExist) {
-                        if(addNewPost($description, $imagesValide)){
-                            header('Location: home.php');
-                        }        
-                    }
-                } else {
-                    foreach ($imagesValide as $value) {
-                        if (file_exists("./img/" .  $value["name"])) {
-                            unlink("./img/" . $value["name"]);
-                        }
-                    }
+$imagesValide = [];
+$fullSize = 0;
+if ($imgs["name"][0] != "") {
+    foreach ($imgs["size"] as $value) {
+        $fullSize += $value;
+    }
+}
+
+// test que la taille de l'ensemble des images est de 70 mega maximum
+if ($fullSize <= 70 * pow(10, 6) && $fullSize != 0) {
+    for ($i = 0; $i < Count($imgs["name"]); $i++) {
+        // test que le fichier recu est bien une image et a une taille de 3 mega
+        if (strstr($imgs["type"][$i], "image/") && $imgs["size"][$i] <= 3 * pow(10, 6) || strstr($imgs["type"][$i], "audio/mpeg") || strstr($imgs["type"][$i], "video/mp4")) {
+            $newNom = uniqid($imgs["name"][$i]);
+            array_push($imagesValide, ["name" => $newNom, "type" => $imgs["type"][$i]]);
+            // verifie si le fichier actuel existe deja sur le serveur, si non alors il l'enregistre
+            if (!file_exists("./img/" . $imgs["name"][$i])) {
+                if (!move_uploaded_file($imgs["tmp_name"][$i], "./img/" . $newNom)) {
+                    $uploadFileState = false;
                 }
             }
-        }else{
-            if(addNewPost($description, $imagesValide)){
-                 header('Location: home.php');
-             } 
+        } else {
+            $imagesValide = null;
+            echo "l'image n'est pas valide";
+            break;
         }
-        break;
+    }
+}
+
+if ($description && $description != "") {
+    switch ($action) {
+        case "new":
+            // si l'upload des fichiers c'est bien passer alors on ajoute a la db sinon on supprime tout les fichiers qui ont ete upload par ce post 
+            if ($uploadFileState) {
+                if (addNewPost($description, $imagesValide)) {
+                    header('Location: home.php');
+                }
+            } else {
+                foreach ($imagesValide as $value) {
+                    if (file_exists("./img/" .  $value["name"])) {
+                        unlink("./img/" . $value["name"]);
+                    }
+                }
+            }
+            break;
+        case "update":
+            if($fullSize != 0){
+                foreach($imagesDuPost as $value){
+                    if (file_exists("./img/" .  $value["name"])) {
+                        unlink("./img/" . $value["name"]);
+                    }
+                }
+            }
+            UpdatePost($idPost, $description, $imagesValide);
+            $_SESSION["modPost"] = "new";
+          //  header('Location: home.php');
+            break;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -108,14 +126,38 @@ switch ($action) {
                         <div class="col-auto">
                             <input class="form-control" type="file" name="imgs[]" id="imgs" accept="image/*, audio/*, video/*" multiple><br>
                         </div>
+                        <div class="container-fluid">
+                            <?php
+                            echo "<label class=\"float-start\">Images Actuelles</label>";
+                            if ($modPost == "update") {
+                                foreach ($imagesDuPost as $value) {
+
+                                    $type = explode("/", $value["typeMedia"]);
+                                    echo "<div style=\"height: 15rem; width: 15rem; float: left; margin: 5px;\" class=\"position-relative\">";
+                                    switch ($type[0]) {
+                                        case "image":
+                                            echo "<img class=\"d-block w-100 img-fluid\" style=\"height: 100%; width: 100%%;\" src=\"img/" . $value["nomFichierMedia"] . "\" alt=\"First slide\">";
+                                            break;
+                                        case "video":
+                                            echo "<video class=\"embed-responsive-item position-absolute\" controls style=\"height: 75%; width: 75%; left: 14%\" src=\"img/" . $value["nomFichierMedia"] . "\" preload=\"auto\" autoplay=\"true\" loop muted allowfullscreen></video>";
+                                            break;
+                                        case "audio":
+                                            echo "<audio class=\"d-block position-absolute\" style=\"top: 25%; left: 12.5%; width: 75%;\" controls src=\"img/" . $value["nomFichierMedia"] . "\" alt=\"First slide\">";
+                                            break;
+                                    }
+                                    echo "</div>";
+                                }
+                            }
+                            ?>
+                        </div>
                         <div class="col-auto">
                             <label class="form-label">Description :</label>
                         </div>
                         <div class="col-auto">
-                            <textarea class="col-form-control" name="description" required></textarea>
+                            <textarea class="col-form-control" name="description" required><?= $com ?></textarea>
                         </div>
 
-                        <button class="btn btn-primary" type="submit" name="action" value="post">valider</button>
+                        <button class="btn btn-primary" type="submit" name="action" value="<?= $modPost ?>">valider</button>
                     </form>
                 </div>
             </div>
